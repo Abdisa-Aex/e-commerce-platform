@@ -1,0 +1,79 @@
+import { Link } from "react-router-dom";
+import "../productItem/style.css";
+
+import { Button, Rating, Tooltip } from "@mui/material";
+import { MdOutlineShoppingCart, MdZoomOutMap } from "react-icons/md";
+import { FaRegHeart } from "react-icons/fa";
+import { IoGitCompareOutline } from "react-icons/io5";
+import { useContext } from "react";
+import { MyContest } from "../../App";
+
+const ProductItem = () => {
+  const context = useContext(MyContest);
+  return (
+    <div className="productItem shadow-lg rounded-md overflow-hidden border-1 border-[rgba(0,0,0,0.1)] flex items-center">
+      <div className=" group imgWrapper w-[25%]  rounded-md overflow-hidden relative">
+        <Link to="/">
+          <div className="img h-[220px] overflow-hidden">
+            <img src="/asset2/ img3.jpg" alt="" className="w-full" />
+            <img
+              src="public/asset2/ img2.jpg"
+              alt=""
+              className="transition-all duration-700 group-hover:scale-100 w-full  absolute top-0 left-0 opacity-0 group-hover:opacity-100"
+            />
+            
+          </div>
+        </Link>
+        <span className="discount flex items-center absolute top-[10px] left-[10px] z-50 bg-primary text-white rounded-lg p-1 text-[12px] font-[500]">
+          10%
+        </span>
+        <div className="actions absolute top-[-200px] right-[5px] z-50 flex items-center gap-2 flex-col w-[50px] transition-all duration-300 group-hover:top-[15px] opacity-0 group-hover:opacity-100">
+          <Tooltip title="view product detailsd" placement="left-start">
+            <Button className="!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-white hover:!bg-primary
+             hover:text-white text-black group" onClick={()=>context.setOpenProductDetailsModal(true)}>
+              <MdZoomOutMap className="text-[18px] !text-black group-hover:text-white hover:!text-white" />
+            </Button>
+          </Tooltip>
+          <Button className="!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-white hover:!bg-primary hover:text-white text-black group">
+            <FaRegHeart className="text-[18px] !text-black group-hover:text-white hover:!text-white" />
+          </Button>
+          <Button className="!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-white hover:!bg-primary hover:text-white text-black group">
+            <IoGitCompareOutline className="text-[18px] !text-black group-hover:text-white hover:!text-white" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="info p-3 py-5 px-8 w-[75%]  ">
+        <h6 className="text-[15px] text-left">
+          <Link to="/" className="link transition-all">
+            Soylent Green
+          </Link>
+        </h6>
+        <h3 className="text-[18px] title mt-2 mb-3 font-[500] text-[#000]">
+          <Link to="/" className="link transition-all">
+            siril Geofgette pink color Saree with Blouse piece
+          </Link>
+        </h3>
+        <p className="text-[14px] mb-3">
+          we denounce the righteous indiganiton and dislike by charms of
+          pleasure of the moment{" "}
+        </p>
+        <Rating name="size-small" defaultValue={4} size="small" readOnly />
+
+        <div className="flex items-center gap-4 ">
+          <span className="oldPrice line-through text-gray-500 text-[15px] font-[500]">
+            $60.00
+          </span>
+          <span className="price text-red-500   text-[15px] font-[600]">
+            $50.00
+          </span>
+        </div>
+        <div className="mt-3">
+          <Button className="btn-org flex gap-2"> <MdOutlineShoppingCart className="text-[20px]"/> Add to cart</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProductItem;
