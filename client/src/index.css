@@ -4,44 +4,33 @@
 
 @font-face {
   font-family: "Montserrat";
-  src: url("./assets/fonts/Montserrat-Thin.ttf") format("truetype");
-  font: 100;
-}
-@font-face {
-  font-family: "Montserrat";
-  src: url("./assets/fonts/Montserrat-Regular.ttf") format("truetype");
+  src: url("./assets/fonts/Montserrat-Regular.woff") format("woff");
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: "Montserrat";
-  src: url("./assets/fonts/Montserrat-Light.ttf") format("truetype");
-  font-weight: 300;
-}
-@font-face {
-  font-family: "Montserrat";
-  src: url("./assets/fonts/Montserrat-Medium.ttf") format("truetype");
+  src: url("./assets/fonts/Montserrat-Medium.woff") format("woff");
   font-weight: 500;
+  font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: "Montserrat";
-  src: url("./assets/fonts/Montserrat-SemiBold.ttf") format("truetype");
+  src: url("./assets/fonts/Montserrat-SemiBold.woff") format("woff");
   font-weight: 600;
+  font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: "Montserrat";
-  src: url("./assets/fonts/Montserrat-Bold.ttf") format("truetype");
+  src: url("./assets/fonts/Montserrat-Bold.woff") format("woff");
   font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
-@font-face {
-  font-family: "Montserrat";
-  src: url("./assets/fonts/Montserrat-ExtraBold.ttf") format("truetype");
-  font-weight: 800;
-}
-@font-face {
-  font-family: "Montserrat";
-  src: url("./assets/fonts/Montserrat-Black.ttf") format("truetype");
-  font-weight: 900;
-}
+
 * {
   margin: 0px;
   padding: 0px;
@@ -396,4 +385,11 @@ input[type="number"]::-webkit-outer-spin-button {
 .myAccountTabs li a.active button svg {
   color: #ff5252 !important;
   opacity: 1 !important;
+}
+
+img { max-width: 100%; }
+@media (max-width: 767px) {
+  .container { width: 94%; }
+  .btn-org { font-size: 14px !important; padding: 6px 14px !important; }
+  .swiper-button-prev, .swiper-button-next { display: none !important; }
 }

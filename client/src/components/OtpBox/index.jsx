@@ -1,89 +1,54 @@
-// import { Button } from "@mui/material";
-// import React, { useState } from "react";
-// import { FaAngleDown, FaAngleUp } from "react-icons/fa6";
-// const OtyBox = () => {
-//   const [qytValue, setQytValue] = useState(1);
-//   const plusQyt = () => {
-//     setQytValue(qytValue + 1);
-//   };
-//   const minusQyt = () => {
-//     if (qytValue === 1) {
-//       setQytValue(1);
-//     } else {
-//       setQytValue(qytValue - 1);
-//     }
-//   };
-//   return (
-//     <div className="qtyBox flex items-center relative">
-//       <input
-//         type="number"
-//         value={qytValue}
-//         className="w-full  h-[40px] p-2 pl-5 text-[15px] focus:outline-none border border-[rgba(0,0,0,0.2)] rounded-md"
-//       />
-//       <div className="flex items-center flex-col justify-between h-[40px] absolute top-0 right-0 z-50 border-[#000] border-l-[1px]">
-//         <Button
-//           className="!min-w-[30px] !w-[30px] !h-[20px] !text-[#000] !rounded-none hover:!bg-[#f1f1f1]"
-//           onClick={plusQyt}
-//         >
-//           <FaAngleUp className="text-[12px] opacity-55" />
-//         </Button>
-//         <Button
-//           className="!min-w-[30px] !w-[30px] !h-[20px] !text-[#000] !rounded-none hover:!bg-[#f1f1f1]"
-//           onClick={minusQyt}
-//         >
-//           <FaAngleDown className="text-[12px] opacity-55 " />
-//         </Button>
-//       </div>
-//     </div>
-//   );
-// };
+import { useRef, useState } from "react";
 
-// export default OtyBox;
-
-import { useState } from "react";
-
-const OtpBox = ({ length, onChange }) => {
+// Row of single-digit boxes. Supports typing, backspace and pasting a whole code.
+const OtpBox = ({ length = 6, onChange }) => {
   const [otp, setOtp] = useState(new Array(length).fill(""));
-  const handleChange = (element, index) => {
-    const value = element.value;
-    if (isNaN(value)) return; //only numbers are allowed
+  const refs = useRef([]);
 
-    //update OTP value
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-    onChange(newOtp.join(""));
-
-    //focus on next input
-
-    if (value && index < length - 1) {
-      document.getElementById(`otp-input-${index + 1}`)?.focus();
-    }
+  const commit = (next) => {
+    setOtp(next);
+    onChange(next.join(""));
   };
 
-  const handlekeyDown = (event, index) => {
-    if (event.key === "Backspace" && otp[index] && index > 0) {
-      document.getElementById(`otp-input-${index - 1}`)?.focus();
-    }
+  const handleChange = (value, index) => {
+    if (!/^\d?$/.test(value)) return; // digits only
+    const next = [...otp];
+    next[index] = value;
+    commit(next);
+    if (value && index < length - 1) refs.current[index + 1]?.focus();
+  };
+
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) refs.current[index - 1]?.focus();
+  };
+
+  const handlePaste = (e) => {
+    const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, length);
+    if (!digits) return;
+    e.preventDefault();
+    const next = new Array(length).fill("");
+    digits.split("").forEach((d, i) => (next[i] = d));
+    commit(next);
+    refs.current[Math.min(digits.length, length - 1)]?.focus();
   };
 
   return (
-    <div
-      style={{ display: "flex", gap: "5px", justifyContent: "center" }}
-      className="otpBox"
-    >
-      {otp.map((data, index) => (
+    <div style={{ display: "flex", gap: "6px", justifyContent: "center" }} className="otpBox">
+      {otp.map((digit, index) => (
         <input
           key={index}
-          id={`otp-input-${index}`}
+          ref={(el) => (refs.current[index] = el)}
           type="text"
+          inputMode="numeric"
+          autoComplete={index === 0 ? "one-time-code" : "off"}
           maxLength={1}
-          value={otp[index]}
-          onChange={(e) => handleChange(e.target, index)}
-          onKeyDown={(e) => handlekeyDown(e, index)}
-          className="w-[45px] h-[45px] text-center text-[17px]"
+          value={digit}
+          onChange={(e) => handleChange(e.target.value, index)}
+          onKeyDown={(e) => handleKeyDown(e, index)}
+          onPaste={handlePaste}
+          className="w-[42px] h-[45px] text-center text-[17px] border border-[rgba(0,0,0,0.3)] rounded-md focus:outline-none focus:border-[#ff5252]"
         />
-      ))}   
+      ))}
     </div>
   );
 };

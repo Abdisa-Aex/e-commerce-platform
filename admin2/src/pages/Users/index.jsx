@@ -1,270 +1,130 @@
-// import Button from "@mui/material/Button";
-import React, { useContext } from "react";
-import { IoMdAdd } from "react-icons/io";
-
+import React, { useCallback, useContext, useEffect, useState } from "react";
+import CircularProgress from "@mui/material/CircularProgress";
 import Pagination from "@mui/material/Pagination";
-import TableContainer from "@mui/material/TableContainer";
-import Table from "@mui/material/Table";
-// import TableHead from "@mui/material/";
-import TableRow from "@mui/material/TableRow";
-import TableCell from "@mui/material/TableCell";
-import TableBody from "@mui/material/TableBody";
-import TablePagination from "@mui/material/TablePagination";
 import Select from "@mui/material/Select";
-
 import MenuItem from "@mui/material/MenuItem";
-import { useState } from "react";
-import ProgressBar from "../../components/ProgressBar";
-import { AiOutlineEdit } from "react-icons/ai";
-import { Button, TableHead } from "@mui/material";
-import { FaRegEye } from "react-icons/fa";
-import { GoTrash } from "react-icons/go";
-import { Checkbox } from "@mui/material";
-import { Link } from "react-router-dom";
-import SearchBox from "../../components/SearchBox";
+import Badge from "../../components/Badge";
 import { MyContest } from "../../App";
-import {MdLocalPhone, MdOutlineMarkEmailRead } from 'react-icons/md'
-import {SlCalender} from 'react-icons/sl'
-const label = { inputProps: { "aria-label": "Checkbox demo" } };
-const columns = [
-  
-  { id: "userImg", label: "USER IMAGE", minWidth: 200 },
-  { id: "userName", label: "USER NAME", minWidth: 200 },
-  {
-    id: "userEmail",
-    label: "USER EMAIL",
-    minWidth: 200,
-  },
+import api from "../../api";
+import { fmtDate } from "../../utils";
 
-  {
-    id: "userPh",
-    label: "USER PHONE NO",
-    minWidth: 200,
-  },
-  {
-    id: "createdDate",
-    label: "CREATED DATE",
-    minWidth: 200,
-  },
-];
 const Users = () => {
-  const count = 100;
+  const { openAlertBox, user: me } = useContext(MyContest);
+  const [data, setData] = useState({ users: [], total: 0, pages: 1 });
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // handle page change
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value));
-    setPage(0);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const q = new URLSearchParams({ page, limit: 10 });
+      if (query) q.set("search", query);
+      setData(await api.get(`/users?${q}`));
+    } catch (e) {
+      openAlertBox("error", e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, query, openAlertBox]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const setStatus = async (u, status) => {
+    try {
+      await api.patch(`/users/${u._id}/status`, { status });
+      openAlertBox("success", `${u.name} is now ${status}`);
+      load();
+    } catch (e) {
+      openAlertBox("error", e.message);
+    }
   };
 
-  const context = useContext(MyContest);
   return (
-    <>
-      <div className="card my-4 pt-5 shadow-md sm:rounded-lg bg-white ">
-        <div className="flex items-center w-full px-5 justify-between ">
-          <div className="col w-[40%]">
-            <h2 className="text-[18px] font-[600]">
-              Users List
-              <span className="font-[400] text-[14px]">
-                (material ui table)
-              </span>
-            </h2>
-          </div>
-          <div className="col w-[40%] ml-auto ">
-            <SearchBox />
-          </div>
+    <div className="bg-white shadow-md rounded-md">
+      <div className="p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-[18px] font-[600]">Users</h2>
+          <p className="mb-0 text-[13px]">{data.total} total</p>
         </div>
-        <br />
-        <TableContainer sx={{ maxHeight: 440 }}>
-          <Table stickyHeader aria-label="sticty table">
-            <TableHead>
-              <TableRow>
-                <TableCell width={80}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                {columns.map((column) => (
-                  <TableCell
-                    width={column.minWidth}
-                    key={column.id}
-                    align={column.align}
-                    style={{ minWidth: column.minWidth }}>
-                    {column.label}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[70px] ">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/product/45745" data-discover="true">
-                        <img
-                          src="1.jpg"
-                          alt=""
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-                  </div>
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Alexo
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <MdOutlineMarkEmailRead /> Alexo@gmail.com
-                  </span>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <MdLocalPhone /> +2519...
-                  </span>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <SlCalender /> 12-12-25
-                  </span>
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[70px] ">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/product/45745" data-discover="true">
-                        <img
-                          src="1.jpg"
-                          alt=""
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-                  </div>
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Alexo
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <MdOutlineMarkEmailRead /> Alexo@gmail.com
-                  </span>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <MdLocalPhone /> +2519...
-                  </span>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <SlCalender /> 12-12-25
-                  </span>
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[70px] ">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/product/45745" data-discover="true">
-                        <img
-                          src="1.jpg"
-                          alt=""
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-                  </div>
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Alexo
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <MdOutlineMarkEmailRead /> Alexo@gmail.com
-                  </span>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <MdLocalPhone /> +2519...
-                  </span>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <SlCalender /> 12-12-25
-                  </span>
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[70px] ">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/product/45745" data-discover="true">
-                        <img
-                          src="1.jpg"
-                          alt=""
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-                  </div>
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Alexo
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <MdOutlineMarkEmailRead /> Alexo@gmail.com
-                  </span>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <MdLocalPhone /> +2519...
-                  </span>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <span className="flex items-center gap-2">
-                    <SlCalender /> 12-12-25
-                  </span>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        <TablePagination
-          component="div"
-          count={count} // total number of rows
-          page={page} // current page
-          onPageChange={handleChangePage} // page change handler
-          rowsPerPage={rowsPerPage} // rows per page
-          onRowsPerPageChange={handleChangeRowsPerPage} // rows per page change
-          rowsPerPageOptions={[10, 25, 100]}
-        />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setPage(1);
+            setQuery(search.trim());
+          }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name or email..."
+            className="border border-[rgba(0,0,0,0.2)] rounded-md h-[40px] px-3 text-[14px] focus:outline-none"
+          />
+        </form>
       </div>
-    </>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><CircularProgress /></div>
+      ) : (
+        <div className="overflow-auto">
+          <table className="w-full text-sm text-left text-gray-600">
+            <thead className="text-xs uppercase bg-gray-50">
+              <tr>
+                <th className="px-4 py-3">User</th>
+                <th className="px-4 py-3">Phone</th>
+                <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Verified</th>
+                <th className="px-4 py-3">Joined</th>
+                <th className="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.users.map((u) => (
+                <tr key={u._id} className="border-b">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3 min-w-[200px]">
+                      <div className="w-[40px] h-[40px] rounded-full overflow-hidden bg-[#f1f1f1] shrink-0">
+                        {u.avatar && <img src={u.avatar} alt="" className="w-full h-full object-cover" />}
+                      </div>
+                      <div>
+                        <h3 className="text-[14px] font-[600] leading-4">{u.name}</h3>
+                        <span className="text-[12px]">{u.email}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">{u.mobile || "-"}</td>
+                  <td className="px-4 py-3">{u.role}</td>
+                  <td className="px-4 py-3">{u.verify_email ? "Yes" : "No"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{fmtDate(u.createdAt)}</td>
+                  <td className="px-4 py-3">
+                    {String(u._id) === String(me?._id) ? (
+                      <Badge status={u.status} />
+                    ) : (
+                      <Select size="small" value={u.status} onChange={(e) => setStatus(u, e.target.value)} className="!text-[13px]">
+                        <MenuItem value="Active">Active</MenuItem>
+                        <MenuItem value="Inactive">Inactive</MenuItem>
+                        <MenuItem value="Suspended">Suspended</MenuItem>
+                      </Select>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {data.users.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-10 text-center">No users found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {data.pages > 1 && (
+        <div className="flex justify-center py-5">
+          <Pagination count={data.pages} page={page} onChange={(e, v) => setPage(v)} />
+        </div>
+      )}
+    </div>
   );
 };
 

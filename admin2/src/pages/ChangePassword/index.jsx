@@ -1,107 +1,48 @@
+import React, { useContext, useState } from "react";
 import Button from "@mui/material/Button";
-import React from "react";
-import { Link, NavLink } from "react-router-dom";
-import { CgLogIn } from "react-icons/cg";
-import { FaRegEye } from "react-icons/fa";
-import { FaEyeSlash } from "react-icons/fa";
-import { FaRegUser } from "react-icons/fa6";
-import LoadingButton from "@mui/lab/LoadingButton";
-import SendIcon from "@mui/icons-material/Save";
-import { useState } from "react";
-import { FcGoogle } from "react-icons/fc";
-import { BsFacebook } from "react-icons/bs";
-import FormControl from "@mui/material/FormControl";
-import Checkbox from "@mui/material/Checkbox";
-import FormControlLabel from "@mui/material/FormControlLabel";
+import CircularProgress from "@mui/material/CircularProgress";
+import TextField from "@mui/material/TextField";
+import { MyContest } from "../../App";
+import api from "../../api";
 
 const ChangePassword = () => {
- 
-  const [isPasswordShow, setIsPasswordShow] = useState(false);
-  const [isPasswordShow2, setIsPasswordShow2] = useState(false);
+  const { openAlertBox } = useContext(MyContest);
+  const [form, setForm] = useState({ oldPassword: "", newPassword: "", confirm: "" });
+  const [saving, setSaving] = useState(false);
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (form.newPassword.length < 8) return openAlertBox("error", "New password must be at least 8 characters");
+    if (form.newPassword !== form.confirm) return openAlertBox("error", "Passwords do not match");
+    setSaving(true);
+    try {
+      await api.put("/users/change-password", { oldPassword: form.oldPassword, newPassword: form.newPassword });
+      openAlertBox("success", "Password changed");
+      setForm({ oldPassword: "", newPassword: "", confirm: "" });
+    } catch (err) {
+      openAlertBox("error", err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <section className="  bg-white w-full ">
-      <header className="w-full fixed top-0 left-0   px-4 py-3 flex items-center justify-between z-50">
-        <Link to="/">
-          <img src="isomor.svg" alt="" className="w-[200px]" />
-        </Link>
-
-        <div className="flex items-center gap-0">
-          <NavLink to="/login" exact={true} activeClassName="isActive">
-            <Button className="!rounded-full !text-[rgba(0,0,0,0.8)] flex gap-1 !py-5 ">
-              <CgLogIn className="text-[18px]" />
-              Login
-            </Button>
-          </NavLink>
-          <NavLink to="/sign-up" exact={true} activeClassName="isActive">
-            <Button className="!rounded-full !text-[rgba(0,0,0,0.8)] flex gap-1 !py-5">
-              <FaRegUser className="text-[15px]" />
-              sign out
-            </Button>
-          </NavLink>
-        </div>
-      </header>
-      <img src="pattern.webp" alt="" className="fixed top-0 left-0 opacity-5" />
-
-      <div className="loginBox card w-[600px] h-[auto] pb-20 mx-auto pt-20 relative z-50">
-        <div className="text-center">
-          <img src="isomor.svg" alt="" className="m-auto" />
-        </div>
-        <h1 className="text-center text-[35px] font-[800] mt-4">
-          Welcome Back! <br />
-          <span className="text-primary">You can change your password from here</span>
-        </h1>
-       
-        <br />
-
-         
-       
-        <form className="w-full px-8 mt-3">
-           
-          <div className="form-group mb-4 w-full">
-            <h4 className="text-[14px] font-[500] mb-1"> New Password</h4>
-            <div className="relative w-full">
-              <input
-                type={isPasswordShow === false ? "text" : "password"}
-                className="w-full h-[50px]  border-2 focus:border-[rgba(0,0,0,0.7)]   rounded-md focus:outline-primary  px-3"
-              />
-              <Button
-                className="!absolute !top-[7px] !right-[10px] z-50 !rounded-full !w-[35px] !h-[35px] !min-w-[35px] !text-gray-500"
-                onClick={() => setIsPasswordShow(!isPasswordShow)}>
-                {isPasswordShow === false ? (
-                  <FaRegEye className="!text-[18px]" />
-                ) : (
-                  <FaEyeSlash className="!text-[18px]" />
-                )}{" "}
-              </Button>
-            </div>
-          </div>
-          <div className="form-group mb-4 w-full">
-            <h4 className="text-[14px] font-[500] mb-1"> Confirm Password</h4>
-            <div className="relative w-full">
-              <input
-                type={isPasswordShow2 === false ? "text" : "password"}
-                className="w-full h-[50px]  border-2 focus:border-[rgba(0,0,0,0.7)]   rounded-md focus:outline-primary  px-3"
-              />
-              <Button
-                className="!absolute !top-[7px] !right-[10px] z-50 !rounded-full !w-[35px] !h-[35px] !min-w-[35px] !text-gray-500"
-                onClick={() => setIsPasswordShow2(!isPasswordShow2)}>
-                {isPasswordShow2 === false ? (
-                  <FaRegEye className="!text-[18px]" />
-                ) : (
-                  <FaEyeSlash className="!text-[18px]" />
-                )}{" "}
-              </Button>
-            </div>
-          </div>
-         
-
-          <Button className="btn-blue btn-lg w-full">Change Password</Button>
-        </form>
+    <form className="bg-white shadow-md rounded-md p-5 max-w-[480px]" onSubmit={submit}>
+      <h2 className="text-[18px] font-[600] mb-5">Change password</h2>
+      <div className="flex flex-col gap-4">
+        <TextField type="password" label="Current password" size="small" value={form.oldPassword}
+          onChange={set("oldPassword")} autoComplete="current-password" />
+        <TextField type="password" label="New password (min 8 characters)" size="small" value={form.newPassword}
+          onChange={set("newPassword")} autoComplete="new-password" />
+        <TextField type="password" label="Confirm new password" size="small" value={form.confirm}
+          onChange={set("confirm")} autoComplete="new-password" />
+        <Button type="submit" disabled={saving} className="btn-blue btn-lg">
+          {saving ? <CircularProgress size={22} color="inherit" /> : "Update password"}
+        </Button>
       </div>
-    </section>
+    </form>
   );
 };
- 
 
 export default ChangePassword;

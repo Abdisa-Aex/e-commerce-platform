@@ -1,37 +1,30 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# dependencies & builds
+node_modules/
+dist/
+dist-ssr/
+coverage/
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Environment variables and secrets
+# environment variables and secrets: NEVER commit these
 .env
 .env.*
 !.env.example
 
-# Framework build output
-.next/
-coverage/
+# logs
+logs/
+*.log
+npm-debug.log*
 
-# Private keys and certificates
+# editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.sw?
+
+# keys and certificates
 *.pem
 *.key
+
+# local API-client scratch data
+fetch-client/

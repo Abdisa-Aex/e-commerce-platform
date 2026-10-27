@@ -1,22 +1,49 @@
-
 import nodemailer from "nodemailer";
 
-// configure the SMTP transporter
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL,      // your Gmail
-    pass: process.env.EMAIL_PASS, // your Gmail app password
-  },
-});
+/**
+ * Sends an email using whichever provider is configured:
+ *
+ *  1. Brevo HTTP API   (BREVO_API_KEY + EMAIL)  <- recommended for Render free tier,
+ *     because Render blocks outbound SMTP ports (465/587) on free web services.
+ *  2. SMTP / Gmail     (EMAIL + EMAIL_PASS)     <- fine for local development.
+ */
+let transporter;
+const getTransporter = () => {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: Number(process.env.SMTP_PORT || 465),
+      secure: (process.env.SMTP_PORT || "465") === "465",
+      auth: { user: process.env.EMAIL, pass: process.env.EMAIL_PASS },
+    });
+  }
+  return transporter;
+};
 
-// function to send email
-async function sendEmail(to, subject, text, html) {
+async function sendEmail({ to, subject, text = "", html = "" }) {
+  const fromName = process.env.EMAIL_FROM_NAME || "Spices Gold";
   try {
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL, // ✅ fixed
+    if (process.env.BREVO_API_KEY) {
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": process.env.BREVO_API_KEY,
+          "content-type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: fromName, email: process.env.EMAIL },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html || `<p>${text}</p>`,
+        }),
+      });
+      if (!res.ok) throw new Error(`Brevo responded ${res.status}: ${await res.text()}`);
+      return { success: true };
+    }
+
+    const info = await getTransporter().sendMail({
+      from: `"${fromName}" <${process.env.EMAIL}>`,
       to,
       subject,
       text,
@@ -24,12 +51,9 @@ async function sendEmail(to, subject, text, html) {
     });
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error("Error sending email:", error.message);
     return { success: false, error: error.message };
   }
 }
 
 export default sendEmail;
-
- 
- 

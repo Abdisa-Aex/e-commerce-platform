@@ -1,520 +1,148 @@
-// import Button from "@mui/material/Button";
-import React, { useContext } from "react";
-import { IoMdAdd } from "react-icons/io";
-
-import Pagination from "@mui/material/Pagination";
-import TableContainer from "@mui/material/TableContainer";
-import Table from "@mui/material/Table";
-// import TableHead from "@mui/material/";
-import TableRow from "@mui/material/TableRow";
-import TableCell from "@mui/material/TableCell";
-import TableBody from "@mui/material/TableBody";
-import TablePagination from "@mui/material/TablePagination";
-import Select from "@mui/material/Select";
-
-import MenuItem from "@mui/material/MenuItem";
-import { useState } from "react";
-import ProgressBar from "../../components/ProgressBar";
-import { AiOutlineEdit } from "react-icons/ai";
-import { Button, TableHead } from "@mui/material";
-import { FaRegEye } from "react-icons/fa";
-import { GoTrash } from "react-icons/go";
-import { Checkbox } from "@mui/material";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import SearchBox from "../../components/SearchBox";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import Pagination from "@mui/material/Pagination";
+import { IoMdAdd } from "react-icons/io";
+import { AiOutlineEdit } from "react-icons/ai";
+import { GoTrash } from "react-icons/go";
 import { MyContest } from "../../App";
-
-const label = { inputProps: { "aria-label": "Checkbox demo" } };
-const columns = [
-  // { id: "id", label: "ID", minWidth: 80 },
-  { id: "product", label: "PRODUCT", minWidth: 200 },
-  { id: "category", label: "CATEGORY", minWidth: 150 },
-  {
-    id: "subcategory",
-    label: "SUB CATEGORY",
-    minWidth: 120,
-  },
-
-  {
-    id: "price",
-    label: "PRICE",
-    minWidth: 150,
-  },
-  {
-    id: "sales",
-    label: "SALES",
-    minWidth: 150,
-  },
-
-  {
-    id: "action",
-    label: "ACTION",
-    minWidth: 100,
-  },
-];
+import api from "../../api";
+import { formatPrice, NO_IMAGE } from "../../utils";
 
 const Products = () => {
-  const [categoryFilterVal, setCategoryFilterVal] = useState("");
-  
-  const count = 100;
+  const { openAlertBox } = useContext(MyContest);
+  const [data, setData] = useState({ products: [], total: 0, pages: 1 });
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
- 
-  const handleChangeCateFilter = (event) => {
-    setCategoryFilterVal(event.target.value);
-  };
- 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value));
-    setPage(0);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const q = new URLSearchParams({ page, limit: 10, sort: "newest" });
+      if (query) q.set("search", query);
+      setData(await api.get(`/products?${q}`));
+    } catch (e) {
+      openAlertBox("error", e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, query, openAlertBox]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const remove = async (p) => {
+    if (!window.confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+    try {
+      await api.del(`/products/${p._id}`);
+      openAlertBox("success", "Product deleted");
+      load();
+    } catch (e) {
+      openAlertBox("error", e.message);
+    }
   };
 
-  const context = useContext(MyContest);
   return (
-    <>
-      <div className="flex items-center justify-between px-2 py-0 mt-3">
-        <h2 className="text-[18px] font-[600]">
-          products{" "}
-          <span className="font-[400] text-[14px]">(material ui table)</span>
-        </h2>
-        <div className="col w-[25%] ml-auto flex items-center justify-end  gap-3">
-          <Button className="btn !bg-green-600 !text-white btn-sm  ">
-            Export
-          </Button>
-          <Button
-            className="btn-blue btn-sm  !text-white"
-            onClick={() =>
-              context.setIsOpenFullScreenPanel({
-                open: true,
-                model: "Add Product",
-              })
-            }>
-            Add Product
-          </Button>
+    <div className="bg-white shadow-md rounded-md">
+      <div className="p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-[18px] font-[600]">Products</h2>
+          <p className="mb-0 text-[13px]">{data.total} total</p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setPage(1);
+              setQuery(search.trim());
+            }}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products..."
+              className="border border-[rgba(0,0,0,0.2)] rounded-md h-[40px] px-3 text-[14px] focus:outline-none"
+            />
+          </form>
+          <Link to="/products/new">
+            <Button className="btn-blue btn-sm flex gap-1">
+              <IoMdAdd className="text-[18px]" /> Add product
+            </Button>
+          </Link>
         </div>
       </div>
 
-      <div className="card my-4 pt-5 shadow-md sm:rounded-lg bg-white ">
-        <div className="flex items-center w-full px-5 justify-between ">
-          <div className="col w-[20%]">
-            <h4 className="font-[600] text-[13px] mb-2">Category By</h4>
-
-            <Select
-              className="w-full "
-              labelId="demo-simple-select-filled-label"
-              id="demo-simple-selct-standard"
-              value={categoryFilterVal}
-              onChange={handleChangeCateFilter}
-              label="category">
-              <MenuItem value="All">
-                <em>All</em>
-              </MenuItem>
-              <MenuItem value={10}>Men</MenuItem>
-              <MenuItem value={20}>Women</MenuItem>
-              <MenuItem value={30}>Kids</MenuItem>
-              {/* </MenuItem> */}
-            </Select>
-          </div>
-          <div className="col w-[20%] ml-auto ">
-            <SearchBox />
-          </div>
+      {loading ? (
+        <div className="flex justify-center py-16"><CircularProgress /></div>
+      ) : (
+        <div className="overflow-auto">
+          <table className="w-full text-sm text-left text-gray-600">
+            <thead className="text-xs uppercase bg-gray-50">
+              <tr>
+                <th className="px-4 py-3">Product</th>
+                <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3">Price</th>
+                <th className="px-4 py-3">Stock</th>
+                <th className="px-4 py-3">Sold</th>
+                <th className="px-4 py-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.products.map((p) => (
+                <tr key={p._id} className="border-b">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3 min-w-[220px]">
+                      <img src={p.images?.[0] || NO_IMAGE} alt="" className="w-[55px] h-[55px] object-cover rounded-md" />
+                      <div>
+                        <h3 className="text-[14px] font-[600] leading-5 line-clamp-2">{p.name}</h3>
+                        <span className="text-[12px]">{p.brand}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {p.category?.name || "-"}
+                    {p.subCategory ? ` / ${p.subCategory.name}` : ""}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {p.oldPrice > p.price && <span className="line-through mr-2 text-gray-400">{formatPrice(p.oldPrice)}</span>}
+                    <b className="text-[#3872fa]">{formatPrice(p.price)}</b>
+                  </td>
+                  <td className={`px-4 py-3 ${p.countInStock < 1 ? "text-red-600 font-bold" : ""}`}>{p.countInStock}</td>
+                  <td className="px-4 py-3">{p.sales}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Link to={`/products/${p._id}/edit`}>
+                        <Button aria-label="edit" className="!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-[#f1f1f1]">
+                          <AiOutlineEdit className="text-[20px] text-[rgba(0,0,0,0.7)]" />
+                        </Button>
+                      </Link>
+                      <Button
+                        aria-label="delete"
+                        onClick={() => remove(p)}
+                        className="!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-[#f1f1f1]">
+                        <GoTrash className="text-[18px] text-[rgba(0,0,0,0.7)]" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {data.products.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-10 text-center">No products found.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
-        <br />
-        <TableContainer sx={{ maxHeight: 440 }}>
-          <Table stickyHeader aria-label="sticty table">
-            <TableHead>
-              <TableRow>
-                <TableCell width={80}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                {columns.map((column) => (
-                  <TableCell
-                    width={column.minWidth}
-                    key={column.id}
-                    align={column.align}>
-                    {column.label}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[300px] ">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/product/45745" data-discover="true">
-                        <img
-                          src="1.jpg"
-                          alt=""
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-                    <div className="info w-[75%]">
-                      <h4 className="font-[600] text-[12px] leading-4 hover:text-primary  ">
-                        <Link to="/product/45745">
-                          vine women rayon karta pant set vine women rayon karta
-                          pant set vine women rayon karta pant set
-                        </Link>
-                      </h4>
-                      <span className="text[12px]"> books</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Eletronics
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  women
-                </TableCell>
+      )}
 
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex gap-1 flex-col ">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[15px] font-[500]">
-                      $60.00
-                    </span>
-                    <span className="price text-primary   text-[15px] font-[600]">
-                      $50.00
-                    </span>
-                  </div>
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <p className="text-[14px] w-[100px]">
-                    <span>342 </span> sale
-                  </p>
-                  <ProgressBar value={40} type="success" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-1">
-                    {/* <Tooltip title="Edit Product" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="view Product details" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="Remove Product" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                  </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-            <TableBody>
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[300px] ">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/product/45745">
-                        <img
-                          src="1.jpg"
-                          alt=""
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-                    <div className="info w-[75%]">
-                      <h4 className="font-[600] text-[12px] leading-4 hover:text-primary  ">
-                        <Link to="/product/45745">
-                          vine women rayon karta pant set vine women rayon karta
-                          pant set vine women rayon karta pant set
-                        </Link>
-                      </h4>
-                      <span className="text[12px]"> books</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Eletronics
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  women
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex gap-1 flex-col ">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[15px] font-[500]">
-                      $60.00
-                    </span>
-                    <span className="price text-primary   text-[15px] font-[600]">
-                      $50.00
-                    </span>
-                  </div>
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <p className="text-[14px] w-[100px]">
-                    <span>342 </span> sale
-                  </p>
-                  <ProgressBar value={40} type="success" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-1">
-                    {/* <Tooltip title="Edit Product" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="view Product details" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="Remove Product" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                  </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-            <TableBody>
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[300px] ">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/product/45745">
-                        <img
-                          src="1.jpg"
-                          alt=""
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-                    <div className="info w-[75%]">
-                      <h4 className="font-[600] text-[12px] leading-4 hover:text-primary  ">
-                        <Link to="/product/45745">
-                          vine women rayon karta pant set vine women rayon karta
-                          pant set vine women rayon karta pant set
-                        </Link>
-                      </h4>
-                      <span className="text[12px]"> books</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Eletronics
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  women
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex gap-1 flex-col ">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[15px] font-[500]">
-                      $60.00
-                    </span>
-                    <span className="price text-primary   text-[15px] font-[600]">
-                      $50.00
-                    </span>
-                  </div>
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <p className="text-[14px] w-[100px]">
-                    <span>342 </span> sale
-                  </p>
-                  <ProgressBar value={40} type="success" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-1">
-                    {/* <Tooltip title="Edit Product" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="view Product details" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="Remove Product" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                  </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-            <TableBody>
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[300px] ">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/product/45745">
-                        <img
-                          src="1.jpg"
-                          alt=""
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-                    <div className="info w-[75%]">
-                      <h4 className="font-[600] text-[12px] leading-4 hover:text-primary  ">
-                        <Link to="/product/45745">
-                          vine women rayon karta pant set vine women rayon karta
-                          pant set vine women rayon karta pant set
-                        </Link>
-                      </h4>
-                      <span className="text[12px]"> books</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Eletronics
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  women
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex gap-1 flex-col ">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[15px] font-[500]">
-                      $60.00
-                    </span>
-                    <span className="price text-primary   text-[15px] font-[600]">
-                      $50.00
-                    </span>
-                  </div>
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <p className="text-[14px] w-[100px]">
-                    <span>342 </span> sale
-                  </p>
-                  <ProgressBar value={40} type="success" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-1">
-                    {/* <Tooltip title="Edit Product" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="view Product details" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="Remove Product" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                  </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-            <TableBody>
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[300px] ">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/product/45745">
-                        <img
-                          src="1.jpg"
-                          alt=""
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-                    <div className="info w-[75%]">
-                      <h4 className="font-[600] text-[12px] leading-4 hover:text-primary  ">
-                        <Link to="/product/45745">
-                          vine women rayon karta pant set vine women rayon karta
-                          pant set vine women rayon karta pant set
-                        </Link>
-                      </h4>
-                      <span className="text[12px]"> books</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Eletronics
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  women
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex gap-1 flex-col ">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[15px] font-[500]">
-                      $60.00
-                    </span>
-                    <span className="price text-primary   text-[15px] font-[600]">
-                      $50.00
-                    </span>
-                  </div>
-                </TableCell>
-
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <p className="text-[14px] w-[100px]">
-                    <span>342 </span> sale
-                  </p>
-                  <ProgressBar value={40} type="success" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-1">
-                    {/* <Tooltip title="Edit Product" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="view Product details" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="Remove Product" placement="top"> */}
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                    {/* </Tooltip> */}
-                  </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        <TablePagination
-          component="div"
-          count={count} // total number of rows
-          page={page} // current page
-          onPageChange={handleChangePage} // page change handler
-          rowsPerPage={rowsPerPage} // rows per page
-          onRowsPerPageChange={handleChangeRowsPerPage} // rows per page change
-          rowsPerPageOptions={[10, 25, 100]}
-        />
-      </div>
-    </>
+      {data.pages > 1 && (
+        <div className="flex justify-center py-5">
+          <Pagination count={data.pages} page={page} onChange={(e, v) => setPage(v)} />
+        </div>
+      )}
+    </div>
   );
 };
 

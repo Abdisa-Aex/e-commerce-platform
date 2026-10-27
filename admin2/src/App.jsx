@@ -1,366 +1,160 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { createContext, lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { CircularProgress, Drawer, useMediaQuery } from "@mui/material";
+import toast, { Toaster } from "react-hot-toast";
 import "./App.css";
-import * as React from "react";
-// import Dashboard from "./pages/Dashboard";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
-import Dashboard from "./pages/Dashboard";
-import { createContext, useState } from "react";
 import Login from "./pages/Login";
-import SignUp from "./pages/SignUp";
-import Products from "./pages/Products";
-import AddProducts from "./pages/Products/AddProducts";
+import api, { tokens } from "./api";
 
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import ListItemText from "@mui/material/ListItemText";
-import ListItemButton from "@mui/material/ListItemButton";
-import List from "@mui/material/List";
-import Divider from "@mui/material/Divider";
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
-import CloseIcon from "@mui/icons-material/Close";
-import { IoMdClose } from "react-icons/io";
-import Slide from "@mui/material/Slide";
-import HomeSliderBanners from "./pages/HomeSliderBanners";
-import AddHomeSlide from "./pages/HomeSliderBanners/addHomeSlide";
-import Category from "./pages/Category";
-import CategoryList from "./pages/Category";
-import AddCategory from "./pages/Category/addCategory";
-import SubCategoryList from "./pages/Category/SubCatList";
-import AddSubCategory from "./pages/Category/addSubCategory ";
-import Users from "./pages/Users";
-import Orders from "./pages/Orders";
-import ForgotePassword from "./pages/ForgotePassword";
-import VerifyAccount from "./pages/VerifyAccount";
-import ChangePassword from "./pages/ChangePassword";
-
-const Transition = React.forwardRef(function Transition(props, ref) {
-  return <Slide   direction="up" ref={ref} {...props} />;
-});
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Products = lazy(() => import("./pages/Products"));
+const ProductForm = lazy(() => import("./pages/Products/ProductForm"));
+const Category = lazy(() => import("./pages/Category"));
+const SubCategory = lazy(() => import("./pages/Category/SubCategory"));
+const HomeSliderBanners = lazy(() => import("./pages/HomeSliderBanners"));
+const Users = lazy(() => import("./pages/Users"));
+const Orders = lazy(() => import("./pages/Orders"));
+const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 
 const MyContest = createContext();
+
+const Spinner = () => (
+  <div className="flex items-center justify-center py-24">
+    <CircularProgress />
+  </div>
+);
+
+const SIDEBAR_WIDTH = 260;
+
+// Everything except /login requires a logged-in ADMIN
+const Shell = ({ ctx }) => {
+  const location = useLocation();
+  const isDesktop = useMediaQuery("(min-width:900px)");
+  const { isSidebarOpen, setIsSidebarOpen } = ctx;
+
+  if (!ctx.ready) return <Spinner />;
+  if (!ctx.isLogin) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+
+  const showFixed = isDesktop && isSidebarOpen;
+
+  return (
+    <section className="main min-h-screen">
+      {isDesktop ? (
+        isSidebarOpen && (
+          <div className="fixed top-0 left-0 h-full z-40" style={{ width: SIDEBAR_WIDTH }}>
+            <Sidebar />
+          </div>
+        )
+      ) : (
+        <Drawer open={isSidebarOpen} onClose={() => setIsSidebarOpen(false)}>
+          <div style={{ width: SIDEBAR_WIDTH }} className="h-full">
+            <Sidebar onNavigate={() => setIsSidebarOpen(false)} />
+          </div>
+        </Drawer>
+      )}
+
+      <div className="transition-all" style={{ marginLeft: showFixed ? SIDEBAR_WIDTH : 0 }}>
+        <Header />
+        <div className="contentRight py-4 px-3 md:px-5">
+          <Suspense fallback={<Spinner />}>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/products/new" element={<ProductForm />} />
+              <Route path="/products/:id/edit" element={<ProductForm />} />
+              <Route path="/category/list" element={<Category />} />
+              <Route path="/subcategory/list" element={<SubCategory />} />
+              <Route path="/homeslider/list" element={<HomeSliderBanners />} />
+              <Route path="/users" element={<Users />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/change-password" element={<ChangePassword />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 function App() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isLogin, setIsLogin] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    typeof window !== "undefined" ? window.innerWidth >= 900 : true
+  );
 
-  const [isOpenFullScreenPanel, setIsOpenFullScreenPanel] = useState({
-    open: false,
-    model: " ",
-  });
- 
+  const openAlertBox = useCallback((status, msg) => {
+    if (status === "success") toast.success(msg);
+    if (status === "error") toast.error(msg);
+  }, []);
 
-  
-  const router = createBrowserRouter([
-    {
-      path: "/orders",
+  const login = useCallback(async (data) => {
+    if (data.user?.role !== "ADMIN") {
+      throw new Error("This account is not an administrator");
+    }
+    tokens.save(data);
+    setUser(data.user);
+  }, []);
 
-      element: (
-        <>
-          <section className="main">
-            <Header />
-            <div className="contentmain flex ">
-              <div
-                className={`overflow-hidden sidebarWrapper ${
-                  isSidebarOpen === true
-                    ? "w-[18%]"
-                    : "w-[0px]  opacity-0 transition-all"
-                }`}>
-                <Sidebar />
-              </div>
-              <div
-                className={`contentRight py-4 px-5   ${
-                  isSidebarOpen === false ? "w-[100%]" : "w-[82%]"
-                }  transition-all `}>
-                <Orders />
-              </div>
-            </div>
-          </section>
-        </>
-      ),
-    },
-    {
-      path: "/users",
+  const logout = useCallback(async () => {
+    try {
+      if (tokens.access) await api.post("/users/logout", { refreshToken: tokens.refresh });
+    } catch {
+      /* already expired */
+    }
+    tokens.clear();
+    setUser(null);
+  }, []);
 
-      element: (
-        <>
-          <section className="main">
-            <Header />
-            <div className="contentmain flex ">
-              <div
-                className={`overflow-hidden sidebarWrapper ${
-                  isSidebarOpen === true
-                    ? "w-[18%]"
-                    : "w-[0px]  opacity-0 transition-all"
-                }`}>
-                <Sidebar />
-              </div>
-              <div
-                className={`contentRight py-4 px-5   ${
-                  isSidebarOpen === false ? "w-[100%]" : "w-[82%]"
-                }  transition-all `}>
-                <Users />
-              </div>
-            </div>
-          </section>
-        </>
-      ),
-    },
-    {
-      path: "/category/List",
+  useEffect(() => {
+    (async () => {
+      if (tokens.access || tokens.refresh) {
+        try {
+          const d = await api.get("/users/me");
+          if (d.user.role === "ADMIN") setUser(d.user);
+          else tokens.clear();
+        } catch {
+          tokens.clear();
+        }
+      }
+      setReady(true);
+    })();
+    const onLogout = () => setUser(null);
+    window.addEventListener("auth:logout", onLogout);
+    return () => window.removeEventListener("auth:logout", onLogout);
+  }, []);
 
-      element: (
-        <>
-          <section className="main">
-            <Header />
-            <div className="contentmain flex ">
-              <div
-                className={`overflow-hidden sidebarWrapper ${
-                  isSidebarOpen === true
-                    ? "w-[18%]"
-                    : "w-[0px]  opacity-0 transition-all"
-                }`}>
-                <Sidebar />
-              </div>
-              <div
-                className={`contentRight py-4 px-5   ${
-                  isSidebarOpen === false ? "w-[100%]" : "w-[82%]"
-                }  transition-all `}>
-                <CategoryList />
-              </div>
-            </div>
-          </section>
-        </>
-      ),
-    },
-    {
-      path: "/HomeSlider/List",
-
-      element: (
-        <>
-          <section className="main">
-            <Header />
-            <div className="contentmain flex ">
-              <div
-                className={`overflow-hidden sidebarWrapper ${
-                  isSidebarOpen === true
-                    ? "w-[18%]"
-                    : "w-[0px]  opacity-0 transition-all"
-                }`}>
-                <Sidebar />
-              </div>
-              <div
-                className={`contentRight py-4 px-5   ${
-                  isSidebarOpen === false ? "w-[100%]" : "w-[82%]"
-                }  transition-all `}>
-                <HomeSliderBanners />
-              </div>
-            </div>
-          </section>
-        </>
-      ),
-    },
-    {
-      path: "/SubCategory/List",
-
-      element: (
-        <>
-          <section className="main">
-            <Header />
-            <div className="contentmain flex ">
-              <div
-                className={`overflow-hidden sidebarWrapper ${
-                  isSidebarOpen === true
-                    ? "w-[18%]"
-                    : "w-[0px]  opacity-0 transition-all"
-                }`}>
-                <Sidebar />
-              </div>
-              <div
-                className={`contentRight py-4 px-5   ${
-                  isSidebarOpen === false ? "w-[100%]" : "w-[82%]"
-                }  transition-all `}>
-                <SubCategoryList />
-              </div>
-            </div>
-          </section>
-        </>
-      ),
-    },
-    {
-      path: "/products",
-
-      element: (
-        <>
-          <section className="main">
-            <Header />
-            <div className="contentmain flex ">
-              <div
-                className={`overflow-hidden sidebarWrapper ${
-                  isSidebarOpen === true
-                    ? "w-[18%]"
-                    : "w-[0px]  opacity-0 transition-all"
-                }`}>
-                <Sidebar />
-              </div>
-              <div
-                className={`contentRight py-4 px-5   ${
-                  isSidebarOpen === false ? "w-[100%]" : "w-[82%]"
-                }  transition-all `}>
-                <Products />
-              </div>
-            </div>
-          </section>
-        </>
-      ),
-    },
-    {
-      path: "/",
-
-      element: (
-        <>
-          <section className="main">
-            <Header />
-            <div className="contentmain flex ">
-              <div
-                className={`overflow-hidden sidebarWrapper ${
-                  isSidebarOpen === true
-                    ? "w-[18%]"
-                    : "w-[0px]  opacity-0 transition-all"
-                }`}>
-                <Sidebar />
-              </div>
-              <div
-                className={`contentRight py-4 px-5   ${
-                  isSidebarOpen === false ? "w-[100%]" : "w-[82%]"
-                }  transition-all `}>
-                <Dashboard />
-              </div>
-            </div>
-          </section>
-        </>
-      ),
-    },
-    {
-      path: "/sign-up",
-
-      element: (
-        <>
-          <SignUp />
-        </>
-      ),
-    },
-    {
-      path: "/forgote-password",
-
-      element: (
-        <>
-          <ForgotePassword />
-        </>
-      ),
-    },
-    {
-      path: "/login",
-
-      element: (
-        <>
-          <Login />
-        </>
-      ),
-    },
-    {
-      path: "/verify-account",
-
-      element: (
-        <>
-          <VerifyAccount />
-        </>
-      ),
-    },
-    {
-      path: "/change-password",
-
-      element: (
-        <>
-          <ChangePassword />
-        </>
-      ),
-    },
-    {
-      path: "/product/upload",
-
-      element: (
-        <>
-          <AddProducts />
-        </>
-      ),
-    },
-  ]);
-  const values = {
-    isSidebarOpen,
-    setIsSidebarOpen,
-    setIsLogin,
-    isLogin,
-    setIsOpenFullScreenPanel,
-    isOpenFullScreenPanel
-  };
+  const ctx = useMemo(
+    () => ({
+      user,
+      isLogin: !!user,
+      ready,
+      login,
+      logout,
+      openAlertBox,
+      isSidebarOpen,
+      setIsSidebarOpen,
+    }),
+    [user, ready, login, logout, openAlertBox, isSidebarOpen]
+  );
 
   return (
     <>
-      <MyContest.Provider value={values}>
-        <RouterProvider router={router} />
-
-        <Dialog
-          fullScreen
-          open={isOpenFullScreenPanel.open}
-          onClose={() =>
-            setIsOpenFullScreenPanel({
-              open: false,
-              // model: "Product",
-            })
-          }
-          slots={{
-            transition: Transition,
-          }}>
-          <AppBar sx={{ position: "relative" }}>
-            <Toolbar>
-              <IconButton
-                edge="start"
-                color="inherit"
-                onClick={() =>
-                  setIsOpenFullScreenPanel({
-                    open: false,
-                    // model: " product",
-                  })
-                }
-                aria-label="close">
-                <IoMdClose className="text-gray-800" />
-              </IconButton>
-              <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-                <span className="text-gray-800">
-                  {isOpenFullScreenPanel?.model}
-                </span>
-              </Typography>
-            </Toolbar>
-          </AppBar>
-          {isOpenFullScreenPanel?.model === "Add Product" && <AddProducts />}
-          {isOpenFullScreenPanel?.model === "Add Home Slide" && (
-            <AddHomeSlide />
-          )}
-          {isOpenFullScreenPanel?.model === "Add New Category" && (
-            <AddCategory />
-          )}
-          {isOpenFullScreenPanel?.model === "Add New Sub Category" && (
-            <AddSubCategory />
-          )}
-        </Dialog>
-      </MyContest.Provider>
+      <BrowserRouter>
+        <MyContest.Provider value={ctx}>
+          <Routes>
+            <Route path="/login" element={ctx.isLogin ? <Navigate to="/" replace /> : <Login />} />
+            <Route path="/*" element={<Shell ctx={ctx} />} />
+          </Routes>
+        </MyContest.Provider>
+      </BrowserRouter>
+      <Toaster position="top-center" />
     </>
   );
 }
 
 export default App;
-
 export { MyContest };

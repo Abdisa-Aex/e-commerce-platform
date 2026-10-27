@@ -3,104 +3,34 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/navigation";
 import { Autoplay, Navigation } from "swiper/modules";
+import { Link } from "react-router-dom";
 
-const HomeSlider = () => {
+// Slides are managed from the admin dashboard (Home Slider)
+const HomeSlider = ({ slides = [] }) => {
+  if (!slides.length) return null;
   return (
     <div className="homeSlider py-4">
       <div className="container">
         <Swiper
-        loop="true"
+          loop={slides.length > 1}
           spaceBetween={10}
           navigation={true}
-          modules={[Navigation,Autoplay]}
-          autoplay={{
-            delay:2500,
-            disableOnInteraction:false,
-          }}
-          className="sliderHome"
-        >
-          <SwiperSlide className="">
-            <div className="item rounded-[20px] overflow-hidden">
-              <img
-                src="file_1734524878924_1721277298204_banner.jpg"
-                alt="banner slide"
-                className=" w-full"
-              />
-            </div>
-          </SwiperSlide>
-
-          <SwiperSlide>
-            <div className="item rounded-[20px] overflow-hidden">
-              <img
-                src="file_1734524930884_NewProject(6).jpg"
-                alt="banner slide"
-                className=" w-full"
-              />
-            </div>{" "}
-          </SwiperSlide>
-          <SwiperSlide>
-            <div className="item rounded-[20px] overflow-hidden">
-              <img
-                src="file_1734524971122_NewProject(8).jpg"
-                alt="banner slide"
-                className=" w-full"
-              />
-            </div>
-          </SwiperSlide>
-          <SwiperSlide>
-            <div className="item rounded-[20px] overflow-hidden">
-              <img
-                src="file_1734524985581_NewProject(11).jpg"
-                alt="banner slide"
-                className=" w-full"
-              />
-            </div>
-          </SwiperSlide>
-          <SwiperSlide>
-            <div className="item rounded-[20px] overflow-hidden">
-              <img
-                src="file_1734525002307_1723967638078_slideBanner1.6bbeed1a0c8ffb494f7c.jpg"
-                alt="banner slide"
-                className=" w-full"
-              />
-            </div>
-          </SwiperSlide>
-          <SwiperSlide>
-            <div className="item rounded-[20px] overflow-hidden">
-              <img
-                src="file_1734525014348_NewProject(7).jpg"
-                alt="banner slide"
-                className=" w-full"
-              />
-            </div>
-          </SwiperSlide>
-          <SwiperSlide>
-            <div className="item rounded-[20px] overflow-hidden">
-              <img
-                src="file_1734525014348_NewProject(7).jpg"
-                alt="banner slide"
-                className=" w-full"
-              />
-            </div>
-          </SwiperSlide>
-          <SwiperSlide>
-            <div className="item rounded-[20px] overflow-hidden">
-              <img
-                src="file_1734525014348_NewProject(7).jpg"
-                alt="banner slide"
-                className=" w-full"
-              />
-            </div>
-          </SwiperSlide>
-          <SwiperSlide>
-            <div className="item rounded-[20px] overflow-hidden">
-              <img
-                src="file_1734525014348_NewProject(7).jpg"
-                alt="banner slide"
-                className=" w-full"
-              />
-            </div>
-          </SwiperSlide>
+          modules={[Navigation, Autoplay]}
+          autoplay={{ delay: 3500, disableOnInteraction: false }}
+          className="sliderHome">
+          {slides.map((s, i) => (
+            <SwiperSlide key={s._id}>
+              <div className="item rounded-[20px] overflow-hidden">
+                {s.link ? (
+                  <Link to={s.link}>
+                    <img src={s.image} alt={s.title || "banner slide"} className="w-full" loading={i ? "lazy" : "eager"} />
+                  </Link>
+                ) : (
+                  <img src={s.image} alt={s.title || "banner slide"} className="w-full" loading={i ? "lazy" : "eager"} />
+                )}
+              </div>
+            </SwiperSlide>
+          ))}
         </Swiper>
       </div>
     </div>

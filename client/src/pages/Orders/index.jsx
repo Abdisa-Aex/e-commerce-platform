@@ -1,242 +1,181 @@
-import React, { useState } from "react";
-import MyListItems from "../MyList/MyListItems";
-import AccountSidebar from "../../components/AccountSidebar";
-import { Button } from "@mui/material";
+import React, { useCallback, useContext, useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Button, CircularProgress } from "@mui/material";
 import { FaAngleDown, FaAngleUp } from "react-icons/fa";
+import AccountSidebar from "../../components/AccountSidebar";
 import Badge from "../../components/Badge";
-import { Collapse } from "react-collapse";
+import { MyContest } from "../../App";
+import api from "../../api";
+import { formatPrice, NO_IMAGE } from "../../utils";
 
 const Orders = () => {
-  const [isOpenOrderdProduct, setIsOpenOrderdProduct] = useState(null);
+  const { openAlertBox } = useContext(MyContest);
+  const [params, setParams] = useSearchParams();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState(null);
+  const [busyId, setBusyId] = useState(null);
 
-  const isShowOrderdProduct = (index) => {
-    if (isOpenOrderdProduct === index) {
-      setIsOpenOrderdProduct(null);
-    } else {
-      setIsOpenOrderdProduct(index);
+  const load = useCallback(async () => {
+    try {
+      const d = await api.get("/orders/mine");
+      setOrders(d.orders);
+    } catch (e) {
+      openAlertBox("error", e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [openAlertBox]);
+
+  // Coming back from Chapa's payment page: ?pay=<orderId> -> confirm the payment
+  useEffect(() => {
+    const txRef = params.get("pay");
+    (async () => {
+      if (txRef) {
+        try {
+          await api.get(`/orders/chapa/verify/${encodeURIComponent(txRef)}`);
+          openAlertBox("success", "Payment confirmed. Thank you!");
+        } catch (e) {
+          openAlertBox("error", e.message);
+        }
+        setParams({}, { replace: true });
+      }
+      load();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const cancel = async (order) => {
+    if (!window.confirm(`Cancel order ${order.orderId}?`)) return;
+    setBusyId(order._id);
+    try {
+      await api.patch(`/orders/${order._id}/cancel`);
+      openAlertBox("success", "Order cancelled");
+      await load();
+    } catch (e) {
+      openAlertBox("error", e.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const payNow = async (order) => {
+    setBusyId(order._id);
+    try {
+      const d = await api.post(`/orders/${order._id}/chapa/init`);
+      window.location.href = d.checkoutUrl;
+    } catch (e) {
+      openAlertBox("error", e.message);
+      setBusyId(null);
     }
   };
 
   return (
     <section className="py-10 w-full">
-      <div className="container flex gap-5">
-        <div className="col1 w-[20%]">
+      <div className="container flex flex-col lg:flex-row gap-5">
+        <div className="col1 w-full lg:w-[20%]">
           <AccountSidebar />
         </div>
 
-        <div className="col2 w-[80%]">
-          <div className="shadow-md rounded-md    bg-white ">
+        <div className="col2 w-full lg:w-[80%]">
+          <div className="shadow-md rounded-md bg-white">
             <div className="py-2 px-3 border-b border-[rgba(0,0,0,0.1)]">
-              <h2>My List</h2>
+              <h2>My Orders</h2>
               <p className="mt-0">
-                There are <span className="font-bold text-primary">2</span>{" "}
-                orders
+                There {orders.length === 1 ? "is" : "are"}{" "}
+                <span className="font-bold text-primary">{orders.length}</span>{" "}
+                {orders.length === 1 ? "order" : "orders"}
               </p>
+            </div>
 
-              <div className="relative overflow-auto mt-5">
-                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50   dark:text-gray-700  ">
+            {loading ? (
+              <div className="flex justify-center py-16">
+                <CircularProgress />
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="p-8 text-center">
+                <p>You have not placed any orders yet.</p>
+                <Link to="/ProductListing">
+                  <Button className="btn-org">Start shopping</Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="relative overflow-auto">
+                <table className="w-full text-sm text-left text-gray-500">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                     <tr>
-                      <th scope="col" className="px-6 py-3">
-                        &nbsp;
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Order Id
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Paymant Id
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Phone Number
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Address
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Pincode
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Total Amount
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Email
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        User Id
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Order Status
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Date
-                      </th>
+                      <th className="px-4 py-3">&nbsp;</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Order ID</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Total</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Payment</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Status</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="bg-white border-b dark:text-gray-800 dark:border-gray-00">
-                      <td className="px-6 py-4 font-[500]">
-                        <Button
-                          className="!w-[35px] !h-[35px] !min-w-[35px] 
-                        !rounded-full bg-[#f1f1f1]"
-                          onClick={() => isShowOrderdProduct(1)}
-                        >
-                          {isOpenOrderdProduct === 1 ? (
-                            <FaAngleDown className="text-[16px]   text-[rgba(0,0,0,0.7)]" />
-                          ) : (
-                            <FaAngleUp className="text-[16px]   text-[rgba(0,0,0,0.7)]" />
-                          )}
-                        </Button>
-                      </td>
-                      <td className="px-6 py-4 font-[500]">
-                        <span className="text-primary"> 3863tr819r3rt7tr</span>
-                      </td>
-                      <td className="px-6 py-4 font-[500]">
-                        <span className="text-primary">pay_wkfwk</span>
-                      </td>
-                      <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                        your name
-                      </td>
-                      <td className="px-6 py-4 font-[500]">097466736</td>
-                      <td className="px-6 py-4 font-[500]">
-                        <span className="block w-[400px] ">
-                          H N0 222 Street N0 6 Bole H N0 222 Street N0 6 Bole H
-                          N0 222 Street N0 6 Bole apartement +251934534255
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 font-[500]">1000</td>
-                      <td className="px-6 py-4 font-[500]">20,000</td>
-                      <td className="px-6 py-4 font-[500]">your@gmail.com</td>
-                      <td className="px-6 py-4 font-[500]">
-                        <span className="text-primary">656273t7fg3</span>{" "}
-                      </td>
-                      <td className="px-6 py-4 font-[500]">
-                        <Badge status="pending" />
-                      </td>
-                      <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                        2024-12-04
-                      </td>
-                    </tr>
+                    {orders.map((o) => (
+                      <React.Fragment key={o._id}>
+                        <tr className="bg-white border-b">
+                          <td className="px-4 py-3">
+                            <Button
+                              aria-label="toggle items"
+                              className="!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-[#f1f1f1]"
+                              onClick={() => setOpenId(openId === o._id ? null : o._id)}>
+                              {openId === o._id ? <FaAngleUp /> : <FaAngleDown />}
+                            </Button>
+                          </td>
+                          <td className="px-4 py-3 font-[500] whitespace-nowrap text-primary">{o.orderId}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">{new Date(o.createdAt).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap font-[500]">{formatPrice(o.totalAmt)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {o.paymentMethod === "COD" ? "Cash on delivery" : "Online"} <Badge status={o.payment_status} />
+                          </td>
+                          <td className="px-4 py-3"><Badge status={o.order_status} /></td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {o.paymentMethod === "CHAPA" && o.payment_status !== "PAID" && o.order_status !== "cancelled" && (
+                              <Button className="btn-org btn-sm !mr-2" disabled={busyId === o._id} onClick={() => payNow(o)}>
+                                Pay now
+                              </Button>
+                            )}
+                            {o.order_status === "pending" && o.payment_status !== "PAID" && (
+                              <Button className="btn-org btn-border btn-sm" disabled={busyId === o._id} onClick={() => cancel(o)}>
+                                Cancel
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
 
-                    {isOpenOrderdProduct === 1 && (
-                      <tr>
-                        <td className=" pl-20 " colSpan={6}>
-                          <div className="relative overflow-auto  ">
-                            <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                              <thead className="text-xs text-gray-700 uppercase bg-gray-50  dark:text-gray-700  ">
-                                <tr>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
-                                    Paymant Id
-                                  </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
-                                    Paymant Title
-                                  </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
-                                    Image
-                                  </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
-                                    Quantity
-                                  </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
-                                    Price
-                                  </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
-                                    SubTotal
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr className="bg-white border-b dark:text-gray-800  dark:border-gray-00">
-                                  <td className="px-6 py-4 font-[500]">
-                                    <span className="text-gray-600">
-                                      {" "}
-                                      3863tr819r3rt7tr
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-4 font-[500]">
-                                    {" "}
-                                    A-line kurti ree & jf
-                                  </td>
-                                  <td className="px-6 py-4 font-[500]">
-                                    <img
-                                      src="/asset/1.jpg"
-                                      className="w-[40px] h-[40px] object-cover rounded-md"
-                                    />
-                                  </td>
-                                  <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                                    45
-                                  </td>
-
-                                  <td className="px-6 py-4 font-[500]">90</td>
-                                  <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                                    90
-                                  </td>
-                                </tr>
-                                <tr className="bg-white border-b dark:text-gray-800  dark:border-gray-00">
-                                  <td className="px-6 py-4 font-[500]">
-                                    <span className="text-gray-600">
-                                      {" "}
-                                      3863tr819r3rt7tr
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-4 font-[500]">
-                                    {" "}
-                                    A-line kurti ree & jf
-                                  </td>
-                                  <td className="px-6 py-4 font-[500]">
-                                    <img
-                                      src="/asset/1.jpg"
-                                      className="w-[40px] h-[40px] object-cover rounded-md"
-                                    />
-                                  </td>
-                                  <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                                    45
-                                  </td>
-
-                                  <td className="px-6 py-4 font-[500]">90</td>
-                                  <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                                    90
-                                  </td>
-                                </tr>
-
-                                <tr>
-                                  <td
-                                    className="bg-[#f1f1f1]  "
-                                    colSpan={12}
-                                  ></td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-             
+                        {openId === o._id && (
+                          <tr className="bg-gray-50">
+                            <td colSpan={7} className="px-4 py-4">
+                              <p className="text-[13px]">
+                                <b>Deliver to:</b> {o.delivery_address?.fullName}, {o.delivery_address?.mobile},{" "}
+                                {o.delivery_address?.address_line}, {o.delivery_address?.city}
+                              </p>
+                              {o.items.map((it) => (
+                                <div key={it.productId} className="flex items-center gap-3 py-2 border-t">
+                                  <img src={it.image || NO_IMAGE} alt="" className="w-[50px] h-[50px] object-cover rounded-md" />
+                                  <div className="flex-1">
+                                    <Link to={`/product/${it.productId}`} className="link text-[14px]">{it.name}</Link>
+                                    <p className="text-[13px] mb-0">Qty: {it.quantity} × {formatPrice(it.price)}</p>
+                                  </div>
+                                  <b className="text-[14px]">{formatPrice(it.price * it.quantity)}</b>
+                                </div>
+                              ))}
+                              <p className="text-right mt-2 mb-0 text-[13px]">
+                                Subtotal {formatPrice(o.subTotalAmt)} · Shipping {formatPrice(o.shippingAmt)} ·{" "}
+                                <b>Total {formatPrice(o.totalAmt)}</b>
+                              </p>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
                   </tbody>
                 </table>
               </div>
-              
-            </div>
+            )}
           </div>
         </div>
       </div>

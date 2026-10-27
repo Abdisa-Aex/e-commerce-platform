@@ -1,73 +1,73 @@
- 
-// import express from "express";
-// import dotenv from "dotenv";
-// import connectDB from "./config/connectDb.js";
-// import userRouter from "./routes/user.route.js";
-// import cors from "cors";
-// import morgan from "morgan";
-// import cookieParser from 'cookie-parser'
-// import helmet from 'helmet'
-
-// dotenv.config();
-// connectDB();// may be delete this from gpt
-
-// const app = express();
-// app.options('*',cors())
-
-// app.use(express.json());
-// app.use(cors());
-// app.use(morgan("dev"));
-// app.use(cookieParser())
-//  app.use(helmet({
-//   crossOriginResourcePolicy:false
-//  }))
-// app.use("/api/users", userRouter); 
-
-// app.get("/", (req, res) => {
-//   // server to client
-//   // res.send("API is running...");
-//   res.json({
-//     message:"API is running..." + process.env.PORT
-//   });
-// });
-
-// // const PORT = process.env.PORT || 8000;
-// // app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-
-
-// connectDB().then(()=>{
-//   app.listen(process.env.PORT,()=>{
-//     console.log('server is running',process.env.PORT);
-//   })
-// })
-
-
-
+import "dotenv/config";
 import express from "express";
-import dotenv from "dotenv";
-import connectDB from "./config/connectDb.js";
-import userRouter from "./routes/userRoutes.js"; // make sure this matches your file
 import cors from "cors";
 import morgan from "morgan";
+import helmet from "helmet";
+import compression from "compression";
+import mongoose from "mongoose";
+import connectDB from "./config/connectDb.js";
+import api from "./routes/index.js";
+import { apiLimiter } from "./middleware/rateLimit.js";
+import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
-dotenv.config();
-connectDB(); // connect to MongoDB
+const required = [
+  "MONGODB_URI",
+  "SECRET_KEY_ACCESS_TOKEN",
+  "SECRET_KEY_REFRESH_TOKEN",
+];
+const missing = required.filter((k) => !process.env[k]);
+if (missing.length) {
+  console.error(`❌ Missing environment variables: ${missing.join(", ")}`);
+  process.exit(1);
+}
 
 const app = express();
+const isProd = process.env.NODE_ENV === "production";
 
-// Middleware
-app.use(express.json());
-app.use(cors());
-app.use(morgan("dev"));
+// Render / Railway / Vercel sit behind a proxy: needed for correct client IPs (rate limiting)
+app.set("trust proxy", 1);
 
-// Routes
-app.use("/api/users", userRouter);
+// Allowed browser origins: CLIENT_URL may hold several, comma separated
+//   CLIENT_URL=https://shop.vercel.app,https://admin.vercel.app
+const allowedOrigins = (process.env.CLIENT_URL || "")
+  .split(",")
+  .map((s) => s.trim().replace(/\/$/, ""))
+  .filter(Boolean);
 
-// Root endpoint
-app.get("/", (req, res) => {
-  res.json({ message: "API is running on port " + process.env.PORT });
-});
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // no Origin header = curl / server-to-server / same-origin: allow
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      // in development allow any localhost port
+      if (!isProd && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return cb(null, true);
+      return cb(Object.assign(new Error("Not allowed by CORS"), { status: 403 }));
+    },
+  })
+);
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+app.use(compression());
+app.use(express.json({ limit: "1mb" }));
+if (!isProd) app.use(morgan("dev"));
+else app.use(morgan("tiny"));
 
-// Start server
+app.get("/", (req, res) => res.json({ message: "API is running" }));
+app.get("/health", (req, res) =>
+  res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({
+    status: mongoose.connection.readyState === 1 ? "ok" : "db-disconnected",
+  })
+);
+
+app.use("/api", apiLimiter, api);
+app.use(notFound);
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+connectDB()
+  .then(() => app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`)))
+  .catch((err) => {
+    console.error("❌ Failed to start:", err.message);
+    process.exit(1);
+  });

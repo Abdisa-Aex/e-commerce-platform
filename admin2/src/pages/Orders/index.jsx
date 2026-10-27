@@ -1,370 +1,162 @@
-import { Button } from "@mui/material";
-import React, { useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import Pagination from "@mui/material/Pagination";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
 import { FaAngleDown, FaAngleUp } from "react-icons/fa";
 import Badge from "../../components/Badge";
-import SearchBox from "../../components/SearchBox";
+import { MyContest } from "../../App";
+import api from "../../api";
+import { fmtDate, formatPrice, NO_IMAGE } from "../../utils";
+
+const STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
 
 const Orders = () => {
-  const [isOpenOrderdProduct, setIsOpenOrderdProduct] = useState(null);
+  const { openAlertBox } = useContext(MyContest);
+  const [data, setData] = useState({ orders: [], total: 0, pages: 1 });
+  const [page, setPage] = useState(1);
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState(null);
 
-  const isShowOrderdProduct = (index) => {
-    if (isOpenOrderdProduct === index) {
-      setIsOpenOrderdProduct(null);
-    } else {
-      setIsOpenOrderdProduct(index);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const q = new URLSearchParams({ page, limit: 10 });
+      if (status) q.set("status", status);
+      setData(await api.get(`/orders/admin/all?${q}`));
+    } catch (e) {
+      openAlertBox("error", e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, status, openAlertBox]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const update = async (order, changes) => {
+    try {
+      await api.patch(`/orders/admin/${order._id}`, changes);
+      openAlertBox("success", "Order updated");
+      load();
+    } catch (e) {
+      openAlertBox("error", e.message);
     }
   };
+
   return (
-    <div className="card my-4 shadow-md sm:rounded-lg bg-white ">
-      <div className="flex items-center justify-between px-5 py-5">
-        <h2 className="text-[20px] font-[600]">Recent Orders</h2>
-        <div className="w-[40%]">
-          <SearchBox />
+    <div className="bg-white shadow-md rounded-md">
+      <div className="p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-[18px] font-[600]">Orders</h2>
+          <p className="mb-0 text-[13px]">{data.total} total</p>
         </div>
+        <Select size="small" displayEmpty value={status} onChange={(e) => { setPage(1); setStatus(e.target.value); }}
+          className="!min-w-[170px] !text-[13px]">
+          <MenuItem value="">All statuses</MenuItem>
+          {STATUSES.map((s) => (
+            <MenuItem key={s} value={s} className="!capitalize">{s}</MenuItem>
+          ))}
+        </Select>
       </div>
 
-      <div className="relative overflow-auto mt-5 pb-5">
-        <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-50   dark:text-gray-700  ">
-            <tr>
-              <th scope="col" className="px-6 py-3">
-                &nbsp;
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                Order Id
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                Paymant Id
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                Name
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                Phone Number
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                Address
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                Pincode
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                Total Amount
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                Email
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                User Id
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                Order Status
-              </th>
-              <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                Date
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="bg-white border-b dark:text-gray-800 dark:border-gray-00">
-              <td className="px-6 py-4 font-[500]">
-                <Button
-                  className="!w-[35px] !h-[35px] !min-w-[35px] 
-                        !rounded-full bg-[#f1f1f1]"
-                  onClick={() => isShowOrderdProduct(1)}>
-                  {isOpenOrderdProduct === 1 ? (
-                    <FaAngleDown className="text-[16px]   text-[rgba(0,0,0,0.7)]" />
-                  ) : (
-                    <FaAngleUp className="text-[16px]   text-[rgba(0,0,0,0.7)]" />
-                  )}
-                </Button>
-              </td>
-              <td className="px-6 py-4 font-[500]">
-                <span className="text-primary font-[600]">
-                  {" "}
-                  3863tr819r3rt7tr
-                </span>
-              </td>
-              <td className="px-6 py-4 font-[500]">
-                <span className="text-primary font-[600]">pay_wkfwk</span>
-              </td>
-              <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                your name
-              </td>
-              <td className="px-6 py-4 font-[500]">097466736</td>
-              <td className="px-6 py-4 font-[500]">
-                <span className="block w-[400px] ">
-                  H N0 222 Street N0 6 Bole H N0 222 Street N0 6 Bole H N0 222
-                  Street N0 6 Bole apartement +251934534255
-                </span>
-              </td>
-              <td className="px-6 py-4 font-[500]">1000</td>
-              <td className="px-6 py-4 font-[500]">20,000</td>
-              <td className="px-6 py-4 font-[500]">your@gmail.com</td>
-              <td className="px-6 py-4 font-[500]">
-                <span className="text-primary font-[600]">656273t7fg3</span>{" "}
-              </td>
-              <td className="px-6 py-4 font-[500]">
-                <Badge status="pending" />
-              </td>
-              <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                2024-12-04
-              </td>
-            </tr>
-
-            {isOpenOrderdProduct === 1 && (
+      {loading ? (
+        <div className="flex justify-center py-16"><CircularProgress /></div>
+      ) : (
+        <div className="overflow-auto">
+          <table className="w-full text-sm text-left text-gray-600">
+            <thead className="text-xs uppercase bg-gray-50">
               <tr>
-                <td className=" pl-20 " colSpan={6}>
-                  <div className="relative overflow-auto  ">
-                    <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                      <thead className="text-xs text-gray-700 uppercase bg-gray-50  dark:text-gray-700  ">
-                        <tr>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            Paymant Id
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            Paymant Title
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            Image
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            Quantity
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            Price
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            SubTotal
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="bg-white border-b dark:text-gray-800  dark:border-gray-00">
-                          <td className="px-6 py-4 font-[500]">
-                            <span className="text-gray-600">
-                              {" "}
-                              3863tr819r3rt7tr
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 font-[500]">
-                            {" "}
-                            A-line kurti ree & jf
-                          </td>
-                          <td className="px-6 py-4 font-[500]">
-                            <img
-                              src="/1.jpg"
-                              className="w-[40px] h-[40px] object-cover rounded-md"
-                            />
-                          </td>
-                          <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                            45
-                          </td>
-
-                          <td className="px-6 py-4 font-[500]">90</td>
-                          <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                            90
-                          </td>
-                        </tr>
-                        <tr className="bg-white border-b dark:text-gray-800  dark:border-gray-00">
-                          <td className="px-6 py-4 font-[500]">
-                            <span className="text-gray-600">
-                              {" "}
-                              3863tr819r3rt7tr
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 font-[500]">
-                            {" "}
-                            A-line kurti ree & jf
-                          </td>
-                          <td className="px-6 py-4 font-[500]">
-                            <img
-                              src="/1.jpg"
-                              className="w-[40px] h-[40px] object-cover rounded-md"
-                            />
-                          </td>
-                          <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                            45
-                          </td>
-
-                          <td className="px-6 py-4 font-[500]">90</td>
-                          <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                            90
-                          </td>
-                        </tr>
-
-                        <tr>
-                          <td className="bg-[#f1f1f1]  " colSpan={12}></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </td>
+                <th className="px-4 py-3">&nbsp;</th>
+                <th className="px-4 py-3">Order</th>
+                <th className="px-4 py-3">Customer</th>
+                <th className="px-4 py-3">Total</th>
+                <th className="px-4 py-3">Payment</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Date</th>
               </tr>
-            )}
-            <tr className="bg-white border-b dark:text-gray-800 dark:border-gray-00">
-              <td className="px-6 py-4 font-[500]">
-                <Button
-                  className="!w-[35px] !h-[35px] !min-w-[35px] 
-                        !rounded-full bg-[#f1f1f1]"
-                  onClick={() => isShowOrderdProduct(2)}>
-                  {isOpenOrderdProduct === 2 ? (
-                    <FaAngleDown className="text-[16px]   text-[rgba(0,0,0,0.7)]" />
-                  ) : (
-                    <FaAngleUp className="text-[16px]   text-[rgba(0,0,0,0.7)]" />
+            </thead>
+            <tbody>
+              {data.orders.map((o) => (
+                <React.Fragment key={o._id}>
+                  <tr className="border-b">
+                    <td className="px-4 py-3">
+                      <Button aria-label="toggle details" className="!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-[#f1f1f1]"
+                        onClick={() => setOpenId(openId === o._id ? null : o._id)}>
+                        {openId === o._id ? <FaAngleUp /> : <FaAngleDown />}
+                      </Button>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap font-[500] text-[#3872fa]">{o.orderId}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{o.userId?.name || "-"}</td>
+                    <td className="px-4 py-3 whitespace-nowrap font-[500]">{formatPrice(o.totalAmt)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {o.paymentMethod === "COD" ? "COD" : "Online"} <Badge status={o.payment_status} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Select size="small" value={o.order_status} onChange={(e) => update(o, { order_status: e.target.value })}
+                        className="!text-[13px] !capitalize">
+                        {STATUSES.map((s) => (
+                          <MenuItem key={s} value={s} className="!capitalize">{s}</MenuItem>
+                        ))}
+                      </Select>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">{fmtDate(o.createdAt)}</td>
+                  </tr>
+
+                  {openId === o._id && (
+                    <tr className="bg-gray-50">
+                      <td colSpan={7} className="px-4 py-4">
+                        <div className="grid md:grid-cols-2 gap-4 mb-3 text-[13px]">
+                          <div>
+                            <b>Customer:</b> {o.userId?.name} · {o.userId?.email}
+                            <br />
+                            <b>Deliver to:</b> {o.delivery_address?.fullName}, {o.delivery_address?.mobile}
+                            <br />
+                            {o.delivery_address?.address_line}, {o.delivery_address?.city} {o.delivery_address?.state}{" "}
+                            {o.delivery_address?.pincode}
+                          </div>
+                          <div className="flex items-center gap-3 md:justify-end">
+                            <span>Payment status:</span>
+                            <Select size="small" value={o.payment_status} onChange={(e) => update(o, { payment_status: e.target.value })}
+                              className="!text-[13px]">
+                              <MenuItem value="PENDING">PENDING</MenuItem>
+                              <MenuItem value="PAID">PAID</MenuItem>
+                              <MenuItem value="FAILED">FAILED</MenuItem>
+                            </Select>
+                          </div>
+                        </div>
+                        {o.items.map((it) => (
+                          <div key={it.productId} className="flex items-center gap-3 py-2 border-t">
+                            <img src={it.image || NO_IMAGE} alt="" className="w-[45px] h-[45px] object-cover rounded-md" />
+                            <span className="flex-1">{it.name}</span>
+                            <span>{it.quantity} × {formatPrice(it.price)}</span>
+                          </div>
+                        ))}
+                        <p className="text-right mt-2 mb-0 text-[13px]">
+                          Subtotal {formatPrice(o.subTotalAmt)} · Shipping {formatPrice(o.shippingAmt)} ·{" "}
+                          <b>Total {formatPrice(o.totalAmt)}</b>
+                        </p>
+                      </td>
+                    </tr>
                   )}
-                </Button>
-              </td>
-              <td className="px-6 py-4 font-[500]">
-                <span className="text-primary font-[600]">
-                  {" "}
-                  3863tr819r3rt7tr
-                </span>
-              </td>
-              <td className="px-6 py-4 font-[500]">
-                <span className="text-primary font-[600]">pay_wkfwk</span>
-              </td>
-              <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                your name
-              </td>
-              <td className="px-6 py-4 font-[500] ">097466736</td>
-              <td className="px-6 py-4 font-[500]">
-                <span className="block w-[400px] ">
-                  H N0 222 Street N0 6 Bole H N0 222 Street N0 6 Bole H N0 222
-                  Street N0 6 Bole apartement +251934534255
-                </span>
-              </td>
-              <td className="px-6 py-4 font-[500]">1000</td>
-              <td className="px-6 py-4 font-[500]">20,000</td>
-              <td className="px-6 py-4 font-[500]">your@gmail.com</td>
-              <td className="px-6 py-4 font-[500]">
-                <span className="text-primary font-[600]">656273t7fg3</span>{" "}
-              </td>
-              <td className="px-6 py-4 font-[500]">
-                <Badge status="pending" />
-              </td>
-              <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                2024-12-04
-              </td>
-            </tr>
+                </React.Fragment>
+              ))}
+              {data.orders.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-10 text-center">No orders found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-            {isOpenOrderdProduct === 2 && (
-              <tr>
-                <td className=" pl-20 " colSpan={6}>
-                  <div className="relative overflow-auto  ">
-                    <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                      <thead className="text-xs text-gray-700 uppercase bg-gray-50  dark:text-gray-700  ">
-                        <tr>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            Paymant Id
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            Paymant Title
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            Image
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            Quantity
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            Price
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 whitespace-nowrap">
-                            SubTotal
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="bg-white border-b dark:text-gray-800  dark:border-gray-00">
-                          <td className="px-6 py-4 font-[500]">
-                            <span className="text-gray-600">
-                              {" "}
-                              3863tr819r3rt7tr
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 font-[500]">
-                            {" "}
-                            A-line kurti ree & jf
-                          </td>
-                          <td className="px-6 py-4 font-[500]">
-                            <img
-                              src="/1.jpg"
-                              className="w-[40px] h-[40px] object-cover rounded-md"
-                            />
-                          </td>
-                          <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                            45
-                          </td>
-
-                          <td className="px-6 py-4 font-[500]">90</td>
-                          <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                            90
-                          </td>
-                        </tr>
-                        <tr className="bg-white border-b dark:text-gray-800  dark:border-gray-00">
-                          <td className="px-6 py-4 font-[500]">
-                            <span className="text-gray-600">
-                              {" "}
-                              3863tr819r3rt7tr
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 font-[500]">
-                            {" "}
-                            A-line kurti ree & jf
-                          </td>
-                          <td className="px-6 py-4 font-[500]">
-                            <img
-                              src="/1.jpg"
-                              className="w-[40px] h-[40px] object-cover rounded-md"
-                            />
-                          </td>
-                          <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                            45
-                          </td>
-
-                          <td className="px-6 py-4 font-[500]">90</td>
-                          <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                            90
-                          </td>
-                        </tr>
-
-                        <tr>
-                          <td className="bg-[#f1f1f1]  " colSpan={12}></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {data.pages > 1 && (
+        <div className="flex justify-center py-5">
+          <Pagination count={data.pages} page={page} onChange={(e, v) => setPage(v)} />
+        </div>
+      )}
     </div>
   );
 };

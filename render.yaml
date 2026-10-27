@@ -1,0 +1,41 @@
+# Render Blueprint: creates the API web service.
+# Dashboard -> New -> Blueprint -> pick this repo. Fill in the secrets marked sync:false.
+services:
+  - type: web
+    name: ecommerce-api
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22
+      - key: MONGODB_URI
+        sync: false
+      - key: SECRET_KEY_ACCESS_TOKEN
+        generateValue: true
+      - key: SECRET_KEY_REFRESH_TOKEN
+        generateValue: true
+      # comma separated list of your front end URLs, no trailing slash
+      - key: CLIENT_URL
+        sync: false
+      - key: EMAIL
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: Spices Gold
+      - key: BREVO_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CHAPA_SECRET_KEY
+        sync: false
+      - key: SHIPPING_FEE
+        value: 0

@@ -1,148 +1,109 @@
-// import Button from "@mui/material/Button";
-import React, { useContext } from "react";
-import { IoMdAdd } from "react-icons/io";
-
-import Pagination from "@mui/material/Pagination";
-import TableContainer from "@mui/material/TableContainer";
-import Table from "@mui/material/Table";
-// import TableHead from "@mui/material/";
-import TableRow from "@mui/material/TableRow";
-import TableCell from "@mui/material/TableCell";
-import TableBody from "@mui/material/TableBody";
-import TablePagination from "@mui/material/TablePagination";
-import Select from "@mui/material/Select";
-
-import MenuItem from "@mui/material/MenuItem";
-import { useState } from "react";
-import ProgressBar from "../../components/ProgressBar";
-import { AiOutlineEdit } from "react-icons/ai";
-import { Button, TableHead } from "@mui/material";
-import { FaRegEye } from "react-icons/fa";
+import React, { useCallback, useContext, useEffect, useState } from "react";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import TextField from "@mui/material/TextField";
 import { GoTrash } from "react-icons/go";
-import { Checkbox } from "@mui/material";
-import { Link } from "react-router-dom";
-import SearchBox from "../../components/SearchBox";
+import { FaRegImages } from "react-icons/fa";
 import { MyContest } from "../../App";
-
-const label = { inputProps: { "aria-label": "Checkbox demo" } };
-const columns = [
-  // { id: "id", label: "ID", minWidth: 80 },
-  { id: "image", label: "IMAGE", minWidth: 250 },
-  { id: "action", label: "ACTION", minWidth: 100 },
-];
+import api from "../../api";
 
 const HomeSliderBanners = () => {
-  const [categoryFilterVal, setCategoryFilterVal] = useState("");
-  // sample data length (replace with your API / data length)
-  const count = 100;
+  const { openAlertBox } = useContext(MyContest);
+  const [slides, setSlides] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [file, setFile] = useState(null);
+  const [link, setLink] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  // handle rows per page change
-  const handleChangeCateFilter = (event) => {
-    setCategoryFilterVal(event.target.value);
-  };
-  // handle page change
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value));
-    setPage(0);
+  const load = useCallback(async () => {
+    try {
+      setSlides((await api.get("/slides")).slides);
+    } catch (e) {
+      openAlertBox("error", e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [openAlertBox]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const add = async (e) => {
+    e.preventDefault();
+    if (!file) return openAlertBox("error", "Choose a banner image");
+    if (file.size > 5 * 1024 * 1024) return openAlertBox("error", "Image is larger than 5MB");
+    const fd = new FormData();
+    fd.append("image", file);
+    if (link.trim()) fd.append("link", link.trim());
+    setSaving(true);
+    try {
+      await api.post("/slides", fd);
+      openAlertBox("success", "Slide added");
+      setFile(null);
+      setLink("");
+      e.target.reset();
+      load();
+    } catch (err) {
+      openAlertBox("error", err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const context = useContext(MyContest);
+  const remove = async (s) => {
+    if (!window.confirm("Delete this slide?")) return;
+    try {
+      await api.del(`/slides/${s._id}`);
+      openAlertBox("success", "Slide deleted");
+      load();
+    } catch (err) {
+      openAlertBox("error", err.message);
+    }
+  };
+
   return (
     <>
-      <div className="flex items-center justify-between px-2 py-0 mt-3">
-        <h2 className="text-[18px] font-[600]">
-          Home Slider Banners
-          <span className="font-[400] text-[14px]">(material ui table)</span>
-        </h2>
-        <div className="col w-[25%] ml-auto flex items-center justify-end  gap-3">
-          <Button className="btn !bg-green-600 !text-white btn-sm  ">
-            Export
-          </Button>
-          <Button
-            className="btn-blue btn-sm  !text-white"
-            onClick={() =>
-              context.setIsOpenFullScreenPanel({
-                open: true,
-                model: "Add Home Slide",
-              })
-            }>
-            Add Home Slide
+      <form className="bg-white shadow-md rounded-md p-4 mb-5" onSubmit={add}>
+        <h2 className="text-[18px] font-[600] mb-1">Add home slide</h2>
+        <p className="text-[13px] mb-4">Wide banner images work best (for example 1400 × 500).</p>
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="uploadBox rounded-md border-4 border-dashed border-[rgba(0,0,0,0.2)] h-[90px] w-full md:w-[220px] bg-gray-100 hover:bg-gray-200 cursor-pointer flex items-center justify-center flex-col relative shrink-0">
+            <FaRegImages className="text-[28px] opacity-40 pointer-events-none" />
+            <span className="text-[12px] pointer-events-none px-2 text-center break-all">
+              {file ? file.name : "Choose image"}
+            </span>
+            <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          </div>
+          <TextField label="Link when clicked (optional, e.g. /ProductListing)" size="small" className="w-full"
+            value={link} onChange={(e) => setLink(e.target.value)} />
+          <Button type="submit" disabled={saving} className="btn-blue btn-lg !min-w-[140px]">
+            {saving ? <CircularProgress size={22} color="inherit" /> : "Add slide"}
           </Button>
         </div>
-      </div>
+      </form>
 
-      <div className="card my-4 pt-5 shadow-md sm:rounded-lg bg-white ">
-        <TableContainer sx={{ maxHeight: 440 }}>
-          <Table stickyHeader aria-label="sticty table">
-            <TableHead>
-              <TableRow>
-                <TableCell width={80}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                {columns.map((column) => (
-                  <TableCell
-                    width={column.minWidth}
-                    key={column.id}
-                    align={column.align}>
-                    {column.label}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow>
-                <TableCell width={80}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-
-                <TableCell width={300}>
-                  <div className="flex items-center gap-4 w-[300px] ">
-                    <div className="img w-full rounded-md overflow-hidden group">
-                      <Link to="/product/45745" data-discover="true">
-                        <img
-                          src="/banner.jpg"
-                          alt=""
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-                  </div>
-                </TableCell>
-
-                <TableCell width={100}>
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#f1f1f1]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[20px]  " />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        <TablePagination
-          component="div"
-          count={count} // total number of rows
-          page={page} // current page
-          onPageChange={handleChangePage} // page change handler
-          rowsPerPage={rowsPerPage} // rows per page
-          onRowsPerPageChange={handleChangeRowsPerPage} // rows per page change
-          rowsPerPageOptions={[10, 25, 100]}
-        />
+      <div className="bg-white shadow-md rounded-md p-4">
+        <h2 className="text-[18px] font-[600] mb-4">Current slides ({slides.length})</h2>
+        {loading ? (
+          <div className="flex justify-center py-10"><CircularProgress /></div>
+        ) : slides.length === 0 ? (
+          <p className="py-6 text-center">No slides yet. The home page hides the slider until you add one.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {slides.map((s) => (
+              <div key={s._id} className="relative rounded-md overflow-hidden border group">
+                <img src={s.image} alt="" className="w-full h-[150px] object-cover" />
+                {s.link && <span className="absolute bottom-0 left-0 bg-black/60 text-white text-[11px] px-2 py-1">{s.link}</span>}
+                <Button aria-label="delete slide" onClick={() => remove(s)}
+                  className="!absolute top-2 right-2 !w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-white">
+                  <GoTrash className="text-[18px] text-[rgba(0,0,0,0.7)]" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
