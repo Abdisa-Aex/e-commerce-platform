@@ -10,6 +10,15 @@ import api from "./routes/index.js";
 import { apiLimiter } from "./middleware/rateLimit.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
+// Local development convenience: sensible defaults so no .env file is needed.
+// (Never used in production: Render sets NODE_ENV=production.)
+if (process.env.NODE_ENV !== "production") {
+  process.env.MONGODB_URI ||= "mongodb://127.0.0.1:27017/spices-gold";
+  process.env.SECRET_KEY_ACCESS_TOKEN ||= "dev-only-access-secret-change-in-production";
+  process.env.SECRET_KEY_REFRESH_TOKEN ||= "dev-only-refresh-secret-change-in-production";
+  process.env.CLIENT_URL ||= "http://localhost:5173,http://localhost:5174";
+}
+
 const required = [
   "MONGODB_URI",
   "SECRET_KEY_ACCESS_TOKEN",

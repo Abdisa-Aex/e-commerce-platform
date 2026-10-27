@@ -22,6 +22,12 @@ const getTransporter = () => {
 
 async function sendEmail({ to, subject, text = "", html = "" }) {
   const fromName = process.env.EMAIL_FROM_NAME || "Spices Gold";
+  // Local development without an email provider: print the message in the server terminal
+  // so you can copy the verification code from there.
+  if (process.env.NODE_ENV !== "production" && !process.env.BREVO_API_KEY && !process.env.EMAIL_PASS) {
+    console.log(`\n📧 [DEV EMAIL - not really sent] To: ${to}\n   Subject: ${subject}\n   ${text || "(see html)"}\n`);
+    return { success: true, dev: true };
+  }
   try {
     if (process.env.BREVO_API_KEY) {
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
